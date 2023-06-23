@@ -3,7 +3,7 @@
 import time
 import threading
 import cv2
-import imutils
+# import imutils
 import numpy as np
 import os
 
@@ -14,7 +14,7 @@ class Camera:
     # 采集人脸特征
     def collect(self, name):
         # 加载人脸分类器
-        face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+        face_cascade = cv2.CascadeClassifier('/home/pi/.local/lib/python3.7/site-packages/cv2/data/haarcascade_frontalface_default.xml')
         # 打开摄像头
         cap = cv2.VideoCapture(0)
         # 设置摄像头分辨率
@@ -62,8 +62,9 @@ class Camera:
 
     # 从dataset/目录下读取人脸特征,并进行训练
     def train(self, name):
+        print("Training...")
         # 读取人脸特征
-        faces, ids = self.read_path('dataset', name)
+        faces, ids = self.read_path('dataset')
 
         # 加载人脸识别器
         recognizer = cv2.face.LBPHFaceRecognizer_create()
@@ -71,6 +72,7 @@ class Camera:
         recognizer.train(faces, np.array(ids))
         # 保存训练结果
         recognizer.save('trainer/trainer.yml')
+        print("Train success!")
 
     # 读取dataset/目录下的人脸特征
     def read_path(self, path_name):
@@ -101,7 +103,7 @@ class Camera:
     # 识别人脸特征
     def recognize(self):
         # 加载人脸分类器
-        face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+        face_cascade = cv2.CascadeClassifier('./.local/lib/python3.7/site-packages/cv2/data/haarcascade_frontalface_default.xml')
         # 加载LBPH人脸识别器
         recognizer = cv2.face.LBPHFaceRecognizer_create()
         # 读取训练数据
@@ -137,7 +139,7 @@ class Camera:
                 # 设置阈值
                 if (confidence < 100):
                     # 显示人名和置信度
-                    cv2.putText(frame, '%s - %.0f' % (gu.get_name(Id), confidence), (x + 30, y + 30), font, 1, color, stroke)
+                    cv2.putText(frame, '%s - %.0f' % ("Master", confidence), (x + 30, y + 30), font, 1, color, stroke)
                     # 人脸个数增加
                     count += 1
                 else:
@@ -149,8 +151,8 @@ class Camera:
             if cv2.waitKey(100) & 0xFF == ord('q'):
                 break
             # 识别够30个人脸后退出
-            elif count >= face_threshold:
-                break
+            # elif count >= face_threshold:
+            #     break
         # 释放摄像头
         cap.release()
         # 关闭窗口
@@ -160,3 +162,6 @@ class Camera:
 if __name__ == '__main__':
     camera = Camera()
     camera.collect('Soulter')
+    camera.train('Soulter')
+    camera.recognize()
+    
