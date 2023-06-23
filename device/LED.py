@@ -1,4 +1,4 @@
-import GPIO
+import RPI.GPIO as GPIO
 import util.general_utils as gu
 
 class LED:
