@@ -23,7 +23,7 @@ class Awtrix:
     def on_message(self, client, userdata, msg):
         print(msg.topic + " " + str(msg.payload))
 
-    def send_from_http(self, text):
+    def send_from_http(self, text, color=[0, 255, 255]):
         url = f"http://{self.host}:{self.port_http}/api/v3/notify"
         print(url)
         data = {

@@ -22,3 +22,7 @@ class RainDetector:
         while True:
             callback(self.detect())
             time.sleep(5)
+
+    def start(self, callback):
+        gu.log("Rain -> start", level=gu.LEVEL_INFO, tag="Rain")
+        threading.Thread(target=self.detect_thread, args=(callback,)).start()
