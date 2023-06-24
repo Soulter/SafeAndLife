@@ -7,6 +7,7 @@ def draw_basic_info(awtrix, todo:Todo, weather=None):
     today = datetime.date.today().strftime("%Y年%m月%d日")
 
     todos = todo.get_by_time(today)
+    todos = [i for i in todos if i["status"] == 0]
     awtrix.send_from_http(override_data={
         "fallingText":True,
         "data":"TODAY TODO",

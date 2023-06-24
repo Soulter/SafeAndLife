@@ -25,7 +25,7 @@ class Todo():
         self.save()
 
     def finish(self, index):
-        self.todo[index]["status"] = 1
+        self.todo[index-1]["status"] = 1
         self.save()
 
     def unfinish(self, index):

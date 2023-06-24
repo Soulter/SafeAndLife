@@ -24,7 +24,7 @@ class ChatGPT():
             
             functions=[{
                 "name":"set_todo",
-                "description":f"设置待办事项。日期如: `2021年6月13日 23:00` 或者 `2021-6-13 23:00` 或者 明天。（绝对日期和相对日期都行, 如果没有具体的小时和分钟，那么就指定为08时00分.）已知今天的日期是{today}。",
+                "description":f"设置待办事项。已知今天的日期是{today}，将时间转换成标准格式`YYYY年MM月DD日`作为date参数的值。（绝对日期和相对日期都行, 如果没有具体的小时和分钟，那么就指定为08时00分.）已知今天的日期是{today}。",
                 "parameters":{
                     "type":"object",
                     "properties":{
@@ -36,7 +36,7 @@ class ChatGPT():
             },
             {
                 "name":"view_todo",
-                "description":f"根据给定的时间查看待办事项。已知今天的日期是{today}。如果给定的时间是`今天`,`明天`之类的相对时间，则转换成格式是`YYYY年MM月DD日`的时间。如果没有给定时间或者表述不清晰或者其他原因，那么就查看所有待办事项",
+                "description":f"根据给定的时间查看待办事项。已知今天的日期是{today}，将时间转换成标准格式`YYYY年MM月DD日`作为date参数的值，如果没有给定时间或者表述不清晰或者其他原因，那么all=true",
                 "parameters":{
                     "type":"object",
                     "properties":{
@@ -45,13 +45,38 @@ class ChatGPT():
                     },
                     "required":["date","all"],
                 },
+            },
+            {
+                "name":"finish_todo",
+                "description":f"根据给定的序号完成（删除）对应的待办事项。",
+                "parameters":{
+                    "type":"object",
+                    "properties":{
+                        "index":{"type":"integer","description":"待办事项的序号index, 如果识别不出就返回-1"}
+                    },
+                    "required":["index"],
+                },
             }
             
             ],
             function_call="auto" 
         )
         response_message = response["choices"][0]["message"]
-        return response_message
+        return response_message, message
+    
+    def func_call_step_2(messages:list, function_name, function_response, model="gpt-3.5-turbo-16k-0613"):
+        messages.append(
+            {
+                "role": "function",
+                "name": function_name,
+                "content": function_response,
+            }
+        )
+        response = openai.ChatCompletion.create(
+            model = model,
+            messages = messages
+        )
+        return response
 
     def set_model(self, model):
         self.model = model

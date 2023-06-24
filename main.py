@@ -5,6 +5,7 @@ from device.Camera import Camera
 from device.Radio import Radio
 from device.RainDetector import RainDetector
 from device.Button import Button
+from device.TemWet import TemWet
 from ui.Awtrix import Awtrix
 from ui.QQ import QQ
 import util.general_utils as gu
@@ -30,8 +31,8 @@ import util.awtrix_anis as aa
 BEEP_PIN = 18 #24
 LED_R_PIN = 35 #19
 LED_G_PIN = 38 #20
-BUTTON_PIN = 22 #25
-RADIO_PIN = 11 #17
+BUTTON_PIN = 33 #13
+RADIO_PIN = 36 #16
 ECHO_PIN = 12 #18
 RAIN_PIN = 15 
 
@@ -42,6 +43,7 @@ rain: RainDetector = None
 button: Button = None
 awtrix: Awtrix = None
 camera: Camera = None
+temp_wet: TemWet = None
 
 todo: Todo = None
 chatgpt: ChatGPT = None
@@ -55,6 +57,7 @@ radio_obj_near_cnt = 0
 radio_distance_threshold = 100
 rain_detect_cnt = 0
 rain_detect_threshold = 10
+in_rainy = False
 
 
 gocq_loop = None
@@ -99,12 +102,15 @@ def oper_qq_msg(message):
 
 
 def chatgpt_send(prompt):
-    res = chatgpt.get_completion(prompt)
-    print(res)
+    res, raw_message_list = chatgpt.get_completion(prompt)
+    raw_message_list.append(res)
+    # print(res)
+    print(raw_message_list)
     if res.get("function_call"):
         available_functions = {
             "set_todo": set_todo,
             "view_todo": view_todo,
+            "finish_todo": finish_todo
         }
         function_name = res["function_call"]["name"]
 
@@ -112,6 +118,7 @@ def chatgpt_send(prompt):
             fuction_to_call = available_functions[function_name]
             function_args = json.loads(res["function_call"]["arguments"])
             fuction_to_call(
+                resp=raw_message_list,
                 content=str(function_args.get("content")),
                 date=str(function_args.get("date")),
             )
@@ -119,15 +126,27 @@ def chatgpt_send(prompt):
             fuction_to_call = available_functions[function_name]
             function_args = json.loads(res["function_call"]["arguments"])
             fuction_to_call(
+                resp=raw_message_list,
                 date=str(function_args.get("date")),
                 all=function_args.get("all"),
             )
+        elif function_name == "finish_todo":
+            fuction_to_call = available_functions[function_name]
+            function_args = json.loads(res["function_call"]["arguments"])
+            fuction_to_call(
+                resp=raw_message_list,
+                index=int(function_args.get("index")),
+            )
 
-def set_todo(content, date, relative=None):
+def set_todo(resp, content, date, relative=None):
     todo.add(content, date)
-    gocq_bot.send(to=FakeFriendSource(905617992), res=[Plain(f"已添加待办事项: \n{content} | {date}")])
+    _r = f"已添加待办事项: \n{content} | {date}"
+    res_msg = _r
+    # res_msg = "{'res':\"" + _r + "\"}"
+    # res_msg = chatgpt.func_call_step_2(resp,"set_todo", res_msg)
+    gocq_bot.send(to=FakeFriendSource(905617992), res=[Plain(res_msg)])
 
-def view_todo(date, all=False):
+def view_todo(resp, date, all=False):
     if all:
         todos = todo.get()
     else:
@@ -142,9 +161,19 @@ def view_todo(date, all=False):
             _status = "未完成"
         else:
             _status = "已完成"
-        res_msg += f"\n{i+1}. 内容: {todos[i]['content']} \n时间: {todos[i]['time']} \n状态: {todos[i]['status']}\n"
+        res_msg += f"\n{i+1}. 内容: {_content} \n时间: {_time} \n状态: {_status}\n"
+
+    # res_msg = chatgpt.func_call_step_2(resp,"view_todo", str(todos))
     gocq_bot.send(to=FakeFriendSource(905617992), res=[Plain(res_msg)])
 
+def finish_todo(resp, index):
+    if index == -1:
+        gocq_bot.send(to=FakeFriendSource(905617992), res=[Plain("删除失败~请重新指定序号呀")])
+    todo.finish(index)
+    res_msg="完成！"
+    # res_msg = chatgpt.func_call_step_2(resp,"finish_todo", "{'res': 'OK'}")
+    gocq_bot.send(to=FakeFriendSource(905617992), res=[Plain(res_msg)])
+    
         
 class FakeFriendSource:
     def __init__(self, user_id):
@@ -152,7 +181,7 @@ class FakeFriendSource:
         self.type = "FriendMessage"
 
 def device_init():
-    global beep, led, radio, rain, button, camera
+    global beep, led, radio, rain, button, camera, temp_wet
     GPIO.setmode(GPIO.BOARD)
     GPIO.setwarnings(False)
 
@@ -175,15 +204,14 @@ def device_init():
     time.sleep(0.2)
     gu.log(f"|-摄像头", gu.LEVEL_INFO, "System")
     camera = Camera()
-
+    gu.log(f"|-温湿度", gu.LEVEL_INFO, "System")
+    temp_wet = TemWet()
 
 
 def addons_init():
     global todo, chatgpt
     todo = Todo()
-    chatgpt = ChatGPT("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")
-
-
+    chatgpt = ChatGPT("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")
 
 def btn_press_callback(res):
     gu.log(f"btn clicked: {str(res)}", gu.LEVEL_INFO, "System")
@@ -293,14 +321,18 @@ def radio_callback(distance):
             else:
                 gu.log(f"没有识别到任何人脸，恢复正常模式", gu.LEVEL_WARNING, "System")
                 master_in_home = False
-                led.set_green()
+                
                 stranger_in_home = False
                 pass
+    if stranger_in_home:
+        led.set_red()
+    else:
+        led.set_green()
 
     if radio_obj_near_cnt == 0:
         in_detect_face = False
         master_in_home = False
-        led.set_green()
+        stranger_in_home = False
 
 # master在家的模式
 def master_mode():
@@ -317,11 +349,29 @@ def camera_detect_face_callback():
     gu.log(f"face_detect", gu.LEVEL_INFO, "System")
 
 def rain_callback(res, isRain):
-    global rain_detect_cnt, rain
-    if isRain:
-        pass
-    gu.log(f"rain data: {res} isRain: {isRain}", gu.LEVEL_INFO, "System")
+    global rain_detect_cnt, rain_detect_threshold, in_rainy
+    if rain_detect_cnt >= rain_detect_threshold and not in_rainy:
+        in_rainy = True
+        awtrix.send_from_http("Rainy now", color=[0, 0, 255])
+        gocq_bot.send("905617992", Plain("下雨了🌧"))
 
+    if isRain:
+        if rain_detect_cnt <= rain_detect_threshold:
+            gu.log("检测到下雨, cnt自增。", gu.LEVEL_INFO)
+            rain_detect_cnt += 1
+    else:
+        if rain_detect_cnt <= 0:
+            pass
+        else:
+            rain_detect_cnt -= 1
+            if rain_detect_cnt == 0:
+                in_rainy = False
+                gu.log("判断: 停止下雨", gu.LEVEL_INFO)
+
+    # gu.log(f"rain data: {res} isRain: {isRain}", gu.LEVEL_INFO, "System")
+
+def temperature_wet(temp, wet):
+    gu.log(f"temp: {temp} wet: {wet}", gu.LEVEL_INFO, "System")
 
 if __name__ == "__main__":
     # init
@@ -337,6 +387,7 @@ if __name__ == "__main__":
     led.set_green()
     radio.start(radio_callback)
     rain.start(rain_callback)
+    temp_wet.start(temperature_wet)
     awtrix.send_from_http("Welcome to Smart Home!", color=[0, 255, 0])
     # gocq_bot.send_qq_msg(FakeFriendSource(905617992), "Welcome to Smart Home!")
     gocq_bot.send(to=FakeFriendSource(905617992), res=[Plain("Welcome to Smart Home!")])

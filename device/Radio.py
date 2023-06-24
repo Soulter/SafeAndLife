@@ -19,10 +19,11 @@ class Radio:
         GPIO.output(self.TRIG, 1)
         time.sleep(0.00001)
         GPIO.output(self.TRIG, 0)
-
+        
         while GPIO.input(self.ECHO) == 0:
             pass
         t1 = time.time()
+
         while GPIO.input(self.ECHO) == 1:
             pass
         t2 = time.time()
