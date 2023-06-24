@@ -71,6 +71,7 @@ class QQ:
                 await self.client.sendGuildChannelMessage(source.guild_id, source.channel_id, res)
                 return
             elif source.type == "FriendMessage":
+                print("send friend message")
                 await self.client.sendFriendMessage(source.user_id, res)
                 return
             elif source.type == "GroupMessage":

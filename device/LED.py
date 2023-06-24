@@ -1,4 +1,4 @@
-import RPI.GPIO as GPIO
+import RPi.GPIO as GPIO
 import util.general_utils as gu
 
 class LED:
@@ -9,11 +9,11 @@ class LED:
         GPIO.setup (Gpin, GPIO.OUT)
     
     def set_red(self):
-        gu.log("led -> red", level=gu.LEVEL_INFO, tag="LED")
+        # gu.log("led -> red", level=gu.LEVEL_INFO, tag="LED")
         GPIO.output(self.r, 1)
         GPIO.output(self.g, 0)
 
     def set_green(self):
-        gu.log("led -> green", level=gu.LEVEL_INFO, tag="LED")
+        # gu.log("led -> green", level=gu.LEVEL_INFO, tag="LED")
         GPIO.output(self.r, 0)
         GPIO.output(self.g, 1)

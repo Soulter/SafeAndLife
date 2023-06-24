@@ -1,4 +1,4 @@
-import RPI.GPIO as GPIO
+import RPi.GPIO as GPIO
 import util.general_utils as gu
 import time
 import threading
@@ -10,6 +10,7 @@ class Radio:
         self.ECHO = ECHO
         GPIO.setup(TRIG, GPIO.OUT)
         GPIO.setup(ECHO, GPIO.IN)
+        self.thread_inst = None
 
     def distance(self):
         GPIO.output(self.TRIG, 0)
@@ -35,4 +36,5 @@ class Radio:
 
     def start(self, callback):
         gu.log("Radio -> start", level=gu.LEVEL_INFO, tag="Radio")
-        threading.Thread(target=self.distance_thread, args=(callback,)).start()
+        self.thread_inst = threading.Thread(target=self.distance_thread, args=(callback,))
+        self.thread_inst.start()

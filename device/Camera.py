@@ -1,5 +1,5 @@
 # import RPI.GPIO as GPIO
-import util.general_utils as gu
+# import util.general_utils as gu
 import time
 import threading
 import cv2
@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import os
 
-pi_haar_path = r'./.local/lib/python3.7/site-packages/cv2/data/haarcascade_frontalface_default.xml'
+pi_haar_path = r'/home/pi/.local/lib/python3.7/site-packages/cv2/data/haarcascade_frontalface_default.xml'
 windows_haar_path = r'C:\Users\90561\AppData\Local\Programs\Python\Python39\Lib\site-packages\cv2\data\haarcascade_frontalface_default.xml'
 
 
@@ -36,7 +36,7 @@ class Camera:
     def _collect(self):
         # 加载人脸分类器
 
-        face_cascade = cv2.CascadeClassifier(windows_haar_path)
+        face_cascade = cv2.CascadeClassifier(pi_haar_path)
         # 打开摄像头
         cap = cv2.VideoCapture(0)
         # 设置摄像头分辨率
@@ -126,18 +126,19 @@ class Camera:
         # 返回人脸特征和id
         return faces, ids
     
-    def stranger_detect(self, face_time_threshold=5):
+    def stranger_detect(self, face_time_threshold=10):
         # face_time_threshold = 5 # 5s
         return self._recognize(face_time_threshold)
     
     # 识别人脸特征
-    def _recognize(self, name, face_frame_threshold=10):
+    def _recognize(self,face_frame_threshold=10):
+        name = "Soulter"
         # 加载人脸分类器
         print("Loading...")
-        face_cascade = cv2.CascadeClassifier(windows_haar_path)
+        face_cascade = cv2.CascadeClassifier(pi_haar_path)
         # 加载LBPH人脸识别器
         recognizer = cv2.face.LBPHFaceRecognizer_create()
-        recognizer.read(f'trainer/{name}.yml')
+        recognizer.read(f'trainer/{name}_face_data.yml')
         print("Load success!")
         font = cv2.FONT_HERSHEY_SIMPLEX
         color = (255, 255, 255)
@@ -147,11 +148,10 @@ class Camera:
         # 打开摄像头
         print("open camera")
         cap = cv2.VideoCapture(0)
-        print("open camera success")
-        print("set camera resolution")
         cap.set(3, 640)
         cap.set(4, 480)
-        print("set camera resolution success")
+
+        detect_img = None
 
         cap_time = time.time()
         while True:
@@ -171,25 +171,28 @@ class Camera:
                     master_count -= 1
                     # 显示未识别
                     cv2.putText(frame, 'not recognized', (x + 30, y + 30), font, 1, color, stroke)
+                    detect_img = frame
             cv2.imshow('frame', frame)
             # 等待退出
             if cv2.waitKey(100) & 0xFF == ord('q'):
                 break
+            if master_count > 10:
+                cap.release()
+                cv2.destroyAllWindows()
+                return master_count
 
             # face_frame_threshold是秒数
             if time.time() - cap_time > face_frame_threshold: 
                 break
         cap.release()
         cv2.destroyAllWindows()
-        if master_count > 0:
-            return True
-        else:
-            return False
+        cv2.imwrite("detect.jpg", detect_img)
+        return master_count
         
 
 if __name__ == '__main__':
     camera = Camera()
-    camera._collect('Soulter')
+    camera._collect()
     camera._train('Soulter')
-    camera._recognize()
+    camera._recognize('Soulter')
     

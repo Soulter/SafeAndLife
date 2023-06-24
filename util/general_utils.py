@@ -489,5 +489,12 @@ def test_markdown():
     image = render_markdown(markdown_text)
     image.show()
 
-test_markdown()
+
+def check_filefolder(path):
+    if os.path.exists(path):
+        return len(os.listdir(path))
+    else:
+        return 0
+
+# test_markdown()
 

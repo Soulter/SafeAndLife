@@ -1,4 +1,4 @@
-import RPI.GPIO as GPIO
+import RPi.GPIO as GPIO
 import util.general_utils as gu
 import time
 import threading
@@ -20,7 +20,8 @@ class RainDetector:
     
     def detect_thread(self, callback):
         while True:
-            callback(self.detect())
+            res = self.detect()
+            callback(res[0], res[1])
             time.sleep(5)
 
     def start(self, callback):
